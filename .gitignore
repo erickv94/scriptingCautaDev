@@ -1,6 +1,6 @@
 # Created by https://www.gitignore.io/api/python,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=python,visualstudiocode
-
+.vscode/*
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -10,6 +10,7 @@ __pycache__/
 # C extensions
 *.so
 env/
+.env
 # Distribution / packaging
 .Python
 build/
