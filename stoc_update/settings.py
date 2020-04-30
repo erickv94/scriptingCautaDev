@@ -12,3 +12,6 @@ db_password=os.getenv('DB_PASSWORD')
 db_host=os.getenv('DB_HOST')
 db_port=os.getenv('DB_PORT')
 db_driver=os.getenv('DB_DRIVER')
+# there are required to access to api
+api_key=os.getenv('API_KEY')
+api_token=os.getenv('API_TOKEN')
