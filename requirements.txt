@@ -2,3 +2,8 @@ pyodbc
 pylint
 python-dotenv
 requests
+pandas
+xlrd
+xlsxwriter
+openpyxl
+
