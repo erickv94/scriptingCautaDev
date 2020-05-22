@@ -1,4 +1,8 @@
 from settings import db_name, db_host, db_password, db_port, db_user, db_driver, api_key, api_token
+from db import connect_to_db, get_cursor
+from insert_data import insert_client, insert_address, get_tva
+from remove_data import removing_clients, removing_addresses
+from pprint import pprint, pformat
 import pyodbc
 import requests
 import time
@@ -43,11 +47,17 @@ def parseToFloatVtex(value):
 
 
 def destructuring_order(order_info, order):
+
     profile_id = order_info['clientProfileData']['userProfileId']
     order_data = {}
     order_data['profile_id'] = profile_id
     order_data['order_id'] = order_info['orderId']
-    print(order_data['order_id'])
+    # not acept rmn and canceled orders
+
+    if 'canceled' in order_info['status'] or 'RMN-' in order_data['order_id']:
+        return
+    print('(+) destructuring order')
+
     order_data['creation_date'] = order_info['creationDate']
     order_data['estimation_date'] = order['ShippingEstimatedDateMax']
     order_data['total'] = parseToFloatVtex(
@@ -63,6 +73,7 @@ def destructuring_order(order_info, order):
     order_data['observation'] = payment_observation
 
     sku_data = order_data['sku_data'] = []
+
     for sku in order_info['items']:
         sku_element = {}
         sku_element['id'] = sku['id']
@@ -71,6 +82,12 @@ def destructuring_order(order_info, order):
         sku_element['price'] = parseToFloatVtex(sku['listPrice'])
         sku_element['discount'] = sku['listPrice'] - sku['price']
         sku_element['discount'] = parseToFloatVtex(sku_element['discount'])
+
+        if sku_element['discount']:
+            percent_tva = float(tvas_dict[sku['refId']]/100)
+            discount = sku_element['discount']
+            discount = round(discount-discount*percent_tva, 2)
+            sku_element['discount'] = discount
         sku_data.append(sku_element)
     order_list.append(order_data)
 
@@ -103,13 +120,53 @@ def destructuring_client(order_info):
         address = order_info["shippingData"]['address']
         address_client = client_info['address'] = {}
         address_client['address_id'] = address['addressId']
+        address['state'] = address['state'].lower().replace('ş', 's')
         address_client['state'] = address['state']
+        # replacing conflicts chars
+        address['city'] = address['city'].lower().replace('ş', 's')
+        address['city'] = address['city'].replace('(', '')
+        address['city'] = address['city'].replace(')', '')
         address_client['city'] = address['city']
         address_client['street'] = address['street']
         address_client['number'] = address['number']
         address_client['complement'] = address['complement']
         address_client['postal_code'] = address['postalCode']
+        address_client['cod_country'] = client_info['cod_country']
+        address_client['phone'] = client_info['phone']
+        address_client['full_name'] = client_info['full_name']
         client_list.append(client_info)
+
+
+def collect_address(client_list):
+    clients = []
+    clients_dict = {}
+    # appending addresses to each client
+    for client in client_list:
+        if client['profile_id'] in clients_dict.keys():
+            clients_dict[client['profile_id']].append(
+                client["address"])  # x: [1], y: [1,2,3]
+        else:
+            addresses = clients_dict[client["profile_id"]] = []
+            addresses.append(client['address'])
+
+    # creating a list of not repeatead addresses into each client
+    for key in clients_dict.keys():
+        addresses_client = {}
+        # avoiding repeated
+        for address in clients_dict[key]:  # [1,1,2,3]
+            if address['address_id'] not in addresses_client.keys():
+                # {1: cont,2: cont,3: cont} rigth now is {x:[], y:[]} not readable
+                addresses_client[address['address_id']] = address
+        # convert into an list
+        clients_dict[key] = []
+        for address in addresses_client.values():
+            clients_dict[key].append(address)
+
+        client_dict = {}
+        client_dict[key] = clients_dict[key]
+        clients.append(client_dict)
+
+    return clients
 
 
 headers = {
@@ -121,153 +178,54 @@ headers = {
 
 
 # url used for api
-url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?creationDate=[2020-05-12 TO 2021-05-13]&orderBy=creationDate,asc&page="
+# f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&
+url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&orderBy=creationDate,asc&page="
 url_get_stock = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders/"
 
 # iteration ids for orders
 flag = True
 current_page = 1
-
-# list for clients not repeated
+# database env
+connection = connect_to_db()
+cursor = get_cursor()
+# removing_clients(connection)
+# removing_addresses(connection)
+tvas_dict = get_tva(connection)
+# global variables to use not destructured
 client_list = []
 order_list = []
 
 while flag:
     # this request is used to get all the orders on a while
+    print('(+) get page {} orders'.format(current_page))
+
     stock_date = get_data(url_stocks_from_date, current_page)
 
     # we get each order id
     for order in stock_date['list']:
         order_id = order["orderId"]
         # cocant url with the id founded
-
+        print('(+) get order {}'.format(order_id))
         order_info = get_data(url_get_stock, order_id)
+
         destructuring_client(order_info)
         destructuring_order(order_info, order)
         # get_stock(url_get_stock)
 
     total_pages = stock_date['paging']['pages']
+    print('(+) end get {} orders'.format(current_page))
     current_page = current_page+1
     if current_page > total_pages:
         flag = False
 
+# destructuring data for insert into nexus
 profile_lasted_list = cleaned_last_profiles(client_list)
-# print(client_list)
-# print(order_list)
+address_per_client = collect_address(client_list)
+print(order_list)
 
-# profile_lasted_list = [{'profile_id': '63a23820-3d38-4825-9dcd-d9fcb1091f80', 'full_name': 'TEST DEMO', 'email': 'ancyent@xserv.ro', 'phone': None, 'cod_country': 'RO', 'birth': None, 'address': {'address_id': '4756718155803', 'state': 'IASI', 'city': 'Iasi', 'street': 'Aleea Voda Grigore Ghica', 'number': '25', 'complement': None, 'postal_code': '700000'}},
-#                        {'profile_id': 'db9d420e-b757-4cb5-9390-eecee560ff12', 'full_name': 'Laura Dorofte', 'email': 'laura.dorofte@gmail.com', 'phone': None, 'cod_country': 'RO', 'birth': None, 'address': {'address_id': '1585644711906', 'state': 'BOTOSANI', 'city': 'Botosani', 'street': 'muncel', 'number': '7', 'complement': None, 'postal_code': '710000'}}]
-
-
-# print('(+) Database connection started')
-# # database connection
-# connection = pyodbc.connect(
-#     "Driver={"+db_driver+"};"
-#     "Database="+db_name + ";"
-#     "Server= "+db_host+","+db_port+";"
-#     "UID="+db_user+";"
-#     "PWD="+db_password+";"
-# )
-# connection.setencoding('utf-16-le')
-
-# print('(+) Database connection ended')
-
-# print('(+) Query to database started')
-# cursor = connection.cursor()
-# cursor.execute(
-#     "SELECT [id_importex]  FROM accesex_parteneri_view where [id_importex] like 'vtex-%'")
-
-# # this filled existed vtex ids
-# existed_vtex_users = []
-# for row in cursor:
-#     existed_vtex_users.append(row[0])
-
-# for vtex_user_id in existed_vtex_users:
-#     for profile in profile_lasted_list:
-#         if vtex_user_id == 'vtex-'+profile['profile_id'][:20]:
-
-
-# sql_insert = """INSERT INTO [V-TEX.VETRO].dbo.importex_parteneri
-# (id_importex, id_intern,
-# id_partener, cif_cnp,
-# denumire, pers_fizica,
-# platitor_tva, registru_comert,
-# cass_arenda, banca,
-# contul, adresa,
-# email, website,
-#  fax, telefon,
-#  telefon_serv, manager,
-# cod_judet, cod_tara,
-# id_localitate, den_localitate,
-# den_regiune, id_clasificare,
-# den_clasificare, id_clasificare2,
-# den_clasificare2, id_clasificare3,
-# den_clasificare3, id_agent,
-# id_extern_agent, den_agent,
-# termen_incasare, termen_plata,
-# moneda, observatii,
-# limita_credit, restanta_max,
-# cod_card, id_disc,
-# den_disc, id_zona_comerciala,
-# den_zona_comerciala,
-# client_ret, password,
-# errorlist, validare, cod_siruta)
-# VALUES(?, ?,
-#  ?, ?,
-#  ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?, ?,
-# ?,
-# ?, ?,
-# ?, ?, ?);
-# """
-
-
-# insert_data = ('vtex-algo', '',
-#                'vtex-algo', '',
-#                'juan jose', 1,
-#                1, '',
-#                0, '',
-#                '', 'pollo campero sv',
-#                'eaxs@as.com', 'website.com',
-#                '', '7122-1223',
-#                '', '',
-#                '', 'RO',
-#                0, '',
-#                '', '80',
-#                '', '',
-#                '', '',
-#                '', '',
-#                '', '',
-#                2, 2,
-#                'RON', '',
-#                0, 0,
-#                '', '',
-#                '', '1',
-#                '',
-#                0, '',
-#                '', 0, 0)
-# cursor.execute(sql_insert, insert_data)
-# connection.commit()
-
-# confirm_procedure = "EXEC importex_parteneri_exec @id_importex = N'{}'".format(
-#     'vtex-algo')
-# cursor.execute(confirm_procedure)
-# connection.commit()
-# print('(+) data inserted properly')
+# print(profile_lasted_list)
+# this will insert each profile into vtex
+# for profile in profile_lasted_list:
+#     insert_client(connection, profile)
+# for address in address_per_client:
+#     insert_address(connection, address)
