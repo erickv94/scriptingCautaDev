@@ -53,6 +53,8 @@ def destructuring_order(order_info, order):
     order_data['profile_id'] = profile_id
     order_data['order_id'] = order_info['orderId']
     # not acept rmn and canceled orders
+    order_data['address_id'] = 'vtex-' + \
+        order_info["shippingData"]['address']['addressId']
 
     if 'canceled' in order_info['status'] or 'RMN-' in order_data['order_id']:
         return
@@ -60,6 +62,14 @@ def destructuring_order(order_info, order):
 
     order_data['creation_date'] = order_info['creationDate']
     order_data['estimation_date'] = order['ShippingEstimatedDateMax']
+
+    splited_creation_date = order_data['creation_date'].split('T')
+    time = splited_creation_date[1].split('.')[0]
+    order_data['creation_date'] = splited_creation_date[0]
+
+    splited_estimation_date = order_data['estimation_date'].split('T')
+    time = splited_estimation_date[1].split('.')[0]
+    order_data['estimation_date'] = splited_estimation_date[0]+' '+time
     order_data['total'] = parseToFloatVtex(
         order['totalValue'])  # needs to parse
     payment_data = order_info['paymentData']
@@ -225,7 +235,8 @@ print(order_list)
 
 # print(profile_lasted_list)
 # this will insert each profile into vtex
-# for profile in profile_lasted_list:
-#     insert_client(connection, profile)
-# for address in address_per_client:
-#     insert_address(connection, address)
+
+for profile in profile_lasted_list:
+    insert_client(connection, profile)
+for address in address_per_client:
+    insert_address(connection, address)

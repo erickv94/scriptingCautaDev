@@ -140,8 +140,8 @@ def insert_address(ctx, address):
 
         insert_data = (vtex_address_id, vtex_address_id,
                        denumire, vtex_client_id,
-                       address['cod_country'], address['city'].upper(),
-                       address['state'].upper(), address['street'],
+                       address['cod_country'], address['city'],
+                       address['state'], address['street'],
                        address['number'], phone,
                        observati)
         print(insert_data)
@@ -166,7 +166,34 @@ def insert_address(ctx, address):
 
 
 def insert_orders(ctx, order):
-    print('me la suda')
+    sql_insert_order = """
+    INSERT INTO [V-TEX.VETRO].dbo.importex_comenzi_clienti
+    (id_importex, id_document, 
+     tip_document,id_carnet,
+    serie_document, data_document, 
+    data_valabil, data_livrare, 
+    scadenta, moneda,
+    id_gestiune, id_extern_client,
+    id_agent, id_extern_adresa, 
+    den_adresa, rezervare, 
+    aprobare, taxare_inversa,
+    validare, observatii, 
+    discount, discount_proc,
+    valoare, blocare_aplicare_promo)
+    VALUES(?, ?,
+           ?, ?,
+           ?, ?,
+           ?, ?,
+           ?, ?, 
+           ?, ?,
+           ?, ?,
+           ?, ?,
+           ?, ?, 
+           ?, ?,
+           ?, ?,  
+           ?, ?)
+    """
+    sql_insert_order_line = ''
 
 
 def get_tva(ctx):
