@@ -1,3 +1,15 @@
+
+import random
+import string
+from settings import carnet_id
+
+
+def randomword(length):
+    letters = string.ascii_lowercase
+
+    return ''.join(random.choice(letters) for i in range(length))
+
+
 def insert_client(ctx, client):
     sql_insert = """INSERT INTO [V-TEX.VETRO].dbo.importex_parteneri
     (id_importex, id_intern,
@@ -101,7 +113,7 @@ def insert_client(ctx, client):
 
     cursor.execute(confirm_procedure)
     ctx.commit()
-    print('(+) data inserted/updated  {} properly'.format(vtex_id))
+    print('(+) data inserted/updated  {} properly (client)'.format(vtex_id))
 
 
 def insert_address(ctx, address):
@@ -130,7 +142,7 @@ def insert_address(ctx, address):
         vtex_address_id = 'vtex-'+address['address_id']
         complement = address['complement'] if address['complement'] else None
         phone = address['phone'] if address['phone'] else ''
-        denumire = address['full_name']
+        denumire = randomword(3)+': '+address['full_name']
         if complement:
             observati = address['street'] + ' nr. ' + \
                 address['number']+', '+complement
@@ -144,56 +156,106 @@ def insert_address(ctx, address):
                        address['state'], address['street'],
                        address['number'], phone,
                        observati)
-        print(insert_data)
+
         cursor = ctx.cursor()
         cursor.execute(sql_insert, insert_data)
         ctx.commit()
         queryExist = "SELECT * FROM [V-TEX.VETRO].dbo.accesex_adrese_parteneri_view WHERE id_importex= '{}'".format(
             vtex_address_id)
         cursor.execute(queryExist)
-        client_cursor = cursor.fetchone()
-        # if the vtex-id exist on parteneri this will be updated at once
-        if client_cursor:
-            confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @manage_existing = N'1'".format(
-                vtex_address_id)
-        else:
-            confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}'".format(
-                vtex_address_id)
+        confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @manage_existing = N'1'".format(
+            vtex_address_id)
 
         cursor.execute(confirm_procedure)
         ctx.commit()
         print('(+) data inserted/updated  {} properly (address)'.format(vtex_address_id))
 
 
-def insert_orders(ctx, order):
+def insert_order(ctx, order):
     sql_insert_order = """
     INSERT INTO [V-TEX.VETRO].dbo.importex_comenzi_clienti
-    (id_importex, id_document, 
+    (id_importex, numar_document,
      tip_document,id_carnet,
-    serie_document, data_document, 
-    data_valabil, data_livrare, 
+    serie_document, data_document,
+    data_valabil, data_livrare,
     scadenta, moneda,
     id_gestiune, id_extern_client,
-    id_agent, id_extern_adresa, 
-    den_adresa, rezervare, 
-    aprobare, taxare_inversa,
-    validare, observatii, 
-    discount, discount_proc,
-    valoare, blocare_aplicare_promo)
+    id_extern_adresa, den_adresa,
+    rezervare, aprobare,
+    taxare_inversa, validare,
+    observatii, discount,
+    discount_proc, valoare,
+    blocare_aplicare_promo)
     VALUES(?, ?,
            ?, ?,
            ?, ?,
            ?, ?,
-           ?, ?, 
            ?, ?,
            ?, ?,
            ?, ?,
-           ?, ?, 
            ?, ?,
-           ?, ?,  
-           ?, ?)
+           ?, ?,
+           ?, ?,
+           ?, ?,
+           ?)
     """
-    sql_insert_order_line = ''
+    sql_insert_order_line = """
+    INSERT INTO [V-TEX.VETRO].dbo.importex_comenzi_clienti_lin
+    (id_document, id_produs,
+    tip_produs,  cantitate,
+    pret_vanzare, pret_vanzare_tva,
+    discount, discount_proc,
+    den_produs)
+
+    VALUES (
+        ?,?,
+        ?,?,
+        ?,?,
+        ?,?,
+        ?
+    )
+    """
+
+    id_document = get_document_id(ctx)
+    vtex_order_id = 'vtex-'+order['order_id']
+    vtex_user_id = 'vtex-'+order['profile_id']
+    vtex_address_id = order['address_id']
+
+    # cursos before of it
+    cursor = ctx.cursor()
+    order_data = (vtex_order_id, id_document,
+                  'Comanda client', carnet_id,
+                  'VETB2C', order['creation_date'],
+                  order['creation_date'], order['estimation_date'],
+                  0, 'RON',
+                  '1(1)', vtex_user_id,
+                  vtex_address_id, '',
+                  1, 1,
+                  0, 1,
+                  order['observation'], 0,
+                  0, order['total'],
+                  0
+                  )
+
+    cursor.execute(sql_insert_order, order_data)
+    ctx.commit()
+
+    for sku in order['sku_data']:
+        order_line_data = (id_document, sku['ref_id'],
+                           'FAA', sku['quantity'],
+                           '', sku['price'],
+                           sku['discount'], '0',
+                           sku['sku_name']
+                           )
+
+        cursor.execute(sql_insert_order_line, order_line_data)
+        ctx.commit()
+
+    confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' ".format(
+        vtex_order_id)
+    cursor.execute(confirm_procedure)
+    ctx.commit()
+    print('(+) data inserted/updated  {} properly (order)'.format(vtex_order_id))
 
 
 def get_tva(ctx):
@@ -202,3 +264,12 @@ def get_tva(ctx):
     cursor.execute(query)
     tvas = cursor.fetchall()
     return dict(tvas)
+
+
+def get_document_id(ctx):
+    sequence_document_query = "SELECT IDENT_CURRENT('importex_comenzi_clienti') + 1 "
+    cursor = ctx.cursor()
+    cursor.execute(sequence_document_query)
+    data = cursor.fetchone()
+    document_id = data[0]
+    return int(document_id)

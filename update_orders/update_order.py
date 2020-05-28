@@ -1,7 +1,7 @@
 from settings import db_name, db_host, db_password, db_port, db_user, db_driver, api_key, api_token
 from db import connect_to_db, get_cursor
-from insert_data import insert_client, insert_address, get_tva
-from remove_data import removing_clients, removing_addresses
+from insert_data import insert_client, insert_address, insert_order, get_tva
+from remove_data import removing_clients, removing_addresses, removing_orders
 from pprint import pprint, pformat
 import pyodbc
 import requests
@@ -87,6 +87,7 @@ def destructuring_order(order_info, order):
     for sku in order_info['items']:
         sku_element = {}
         sku_element['id'] = sku['id']
+        sku_element['sku_name'] = sku['name']
         sku_element['ref_id'] = sku['refId']
         sku_element['quantity'] = sku['quantity']
         sku_element['price'] = parseToFloatVtex(sku['listPrice'])
@@ -198,12 +199,16 @@ current_page = 1
 # database env
 connection = connect_to_db()
 cursor = get_cursor()
-# removing_clients(connection)
-# removing_addresses(connection)
+
 tvas_dict = get_tva(connection)
 # global variables to use not destructured
 client_list = []
 order_list = []
+
+# only needed if you want to deleted, each entity on db
+# removing_addresses(connection)
+# removing_clients(connection)
+# removing_orders(connection)
 
 while flag:
     # this request is used to get all the orders on a while
@@ -231,12 +236,12 @@ while flag:
 # destructuring data for insert into nexus
 profile_lasted_list = cleaned_last_profiles(client_list)
 address_per_client = collect_address(client_list)
-print(order_list)
 
 # print(profile_lasted_list)
 # this will insert each profile into vtex
-
 for profile in profile_lasted_list:
     insert_client(connection, profile)
 for address in address_per_client:
     insert_address(connection, address)
+for order in order_list:
+    insert_order(connection, order)
