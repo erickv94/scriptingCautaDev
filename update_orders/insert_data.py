@@ -142,7 +142,7 @@ def insert_address(ctx, address):
         vtex_address_id = 'vtex-'+address['address_id']
         complement = address['complement'] if address['complement'] else None
         phone = address['phone'] if address['phone'] else ''
-        denumire = randomword(3)+': '+address['full_name']
+        denumire = address['street']+' '+address['number']+' '+randomword(3)
         if complement:
             observati = address['street'] + ' nr. ' + \
                 address['number']+', '+complement
