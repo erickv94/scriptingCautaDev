@@ -236,26 +236,37 @@ def insert_order(ctx, order):
                   0, order['total'],
                   0
                   )
-
     cursor.execute(sql_insert_order, order_data)
     ctx.commit()
-
-    for sku in order['sku_data']:
-        order_line_data = (id_document, sku['ref_id'],
-                           'FAA', sku['quantity'],
-                           '', sku['price'],
-                           sku['discount'], '0',
-                           sku['sku_name']
-                           )
-
+    sql_exist_order = "select * from accesex_comenzi_clienti  where id_importex = '{}'".format(
+        vtex_order_id)
+    cursor.execute(sql_exist_order)
+    exist = cursor.fetchone()
+    if not exist:
+        for sku in order['sku_data']:
+            order_line_data = (id_document, sku['ref_id'],
+                               'FAA', sku['quantity'],
+                               '', sku['price'],
+                               sku['discount'], '0',
+                               sku['sku_name']
+                               )
+            cursor.execute(sql_insert_order_line, order_line_data)
+            ctx.commit()
+        order_line_data = (id_document, "3612(1)",
+                           'FAA', 1,
+                           '', order['shipping_price'],
+                           0, '0',
+                           "Shipping")
         cursor.execute(sql_insert_order_line, order_line_data)
         ctx.commit()
 
-    confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' ".format(
-        vtex_order_id)
-    cursor.execute(confirm_procedure)
-    ctx.commit()
-    print('(+) data inserted/updated  {} properly (order)'.format(vtex_order_id))
+        confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' ".format(
+            vtex_order_id)
+        cursor.execute(confirm_procedure)
+        ctx.commit()
+        print('(+) data inserted  {} properly (order)'.format(vtex_order_id))
+    else:
+        print('(+) order already inserted  {} properly (order)'.format(vtex_order_id))
 
 
 def get_tva(ctx):

@@ -45,5 +45,6 @@ def removing_orders(ctx):
             row[0])
         cursor.execute(sql)
         ctx.commit()
-
+    cursor.execute(
+        "SELECT [id_importex]  FROM accesex_comenzi_clienti where [id_importex] like 'vtex-%'")
     print('(+) Removed orders from database')

@@ -75,6 +75,10 @@ def destructuring_order(order_info, order):
     payment_data = order_info['paymentData']
     payment_observation = ''
 
+    for order in order_info['totals']:
+        if order['id'] == 'Shipping':
+            order_data['shipping_price'] = parseToFloatVtex(order['value'])
+
     for transactions in payment_data['transactions']:
         for payment in transactions['payments']:
             payment_observation = payment_observation + \
@@ -206,9 +210,9 @@ client_list = []
 order_list = []
 
 # only needed if you want to deleted, each entity on db
-# removing_addresses(connection)
-# removing_clients(connection)
 # removing_orders(connection)
+# removing_clients(connection)
+# removing_addresses(connection)
 
 while flag:
     # this request is used to get all the orders on a while
@@ -232,7 +236,7 @@ while flag:
     current_page = current_page+1
     if current_page > total_pages:
         flag = False
-
+# print(order_list)
 # destructuring data for insert into nexus
 profile_lasted_list = cleaned_last_profiles(client_list)
 address_per_client = collect_address(client_list)
