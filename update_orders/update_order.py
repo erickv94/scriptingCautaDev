@@ -56,7 +56,7 @@ def destructuring_order(order_info, order):
     order_data['address_id'] = 'vtex-' + \
         order_info["shippingData"]['address']['addressId']
 
-    if 'canceled' in order_info['status'] or 'RMN-' in order_data['order_id']:
+    if 'canceled' in order_info['status'] or 'RMN-' in order_data['order_id'] or 'window-to-cancel' in order_info['status']:
         return
     print('(+) destructuring order')
 
@@ -141,6 +141,7 @@ def destructuring_client(order_info):
         address['city'] = address['city'].lower().replace('ş', 's')
         address['city'] = address['city'].replace('(', '')
         address['city'] = address['city'].replace(')', '')
+#
         address_client['city'] = address['city']
         address_client['street'] = address['street']
         address_client['number'] = address['number']
@@ -149,6 +150,7 @@ def destructuring_client(order_info):
         address_client['cod_country'] = client_info['cod_country']
         address_client['phone'] = client_info['phone']
         address_client['full_name'] = client_info['full_name']
+
         client_list.append(client_info)
 
 
@@ -194,7 +196,7 @@ headers = {
 
 # url used for api
 # f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&
-url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&orderBy=creationDate,asc&page="
+url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[2020-06-02T06:00:00.000Z TO 2020-06-02T09:59:59.999Z]&orderBy=creationDate,asc&page="
 url_get_stock = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders/"
 
 # iteration ids for orders

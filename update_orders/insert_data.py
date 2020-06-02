@@ -105,10 +105,10 @@ def insert_client(ctx, client):
     client_cursor = cursor.fetchone()
     # if the vtex-id exist on parteneri this will be updated at once
     if client_cursor:
-        confirm_procedure = "EXEC importex_parteneri_exec @id_importex = N'{}', @manage_existing = N'1'".format(
+        confirm_procedure = "EXEC importex_parteneri_exec @id_importex = N'{}', @manage_existing = N'1' , @keep_data_on_err = N'0' ".format(
             vtex_id)
     else:
-        confirm_procedure = "EXEC importex_parteneri_exec @id_importex = N'{}'".format(
+        confirm_procedure = "EXEC importex_parteneri_exec @id_importex = N'{}' , @keep_data_on_err = N'0'".format(
             vtex_id)
 
     cursor.execute(confirm_procedure)
@@ -163,8 +163,13 @@ def insert_address(ctx, address):
         queryExist = "SELECT * FROM [V-TEX.VETRO].dbo.accesex_adrese_parteneri_view WHERE id_importex= '{}'".format(
             vtex_address_id)
         cursor.execute(queryExist)
-        confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @manage_existing = N'1'".format(
-            vtex_address_id)
+        exist = cursor.fetchone()
+        if exist:
+            confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @manage_existing = N'1' , @keep_data_on_err = N'0' ".format(
+                vtex_address_id)
+        else:
+            confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @keep_data_on_err = N'0' ".format(
+                vtex_address_id)
 
         cursor.execute(confirm_procedure)
         ctx.commit()
@@ -238,10 +243,13 @@ def insert_order(ctx, order):
                   )
     cursor.execute(sql_insert_order, order_data)
     ctx.commit()
+
     sql_exist_order = "select * from accesex_comenzi_clienti  where id_importex = '{}'".format(
         vtex_order_id)
+
     cursor.execute(sql_exist_order)
     exist = cursor.fetchone()
+
     if not exist:
         for sku in order['sku_data']:
             order_line_data = (id_document, sku['ref_id'],
@@ -260,7 +268,7 @@ def insert_order(ctx, order):
         cursor.execute(sql_insert_order_line, order_line_data)
         ctx.commit()
 
-        confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' ".format(
+        confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' , @keep_data_on_err = N'0' ".format(
             vtex_order_id)
         cursor.execute(confirm_procedure)
         ctx.commit()
@@ -268,8 +276,14 @@ def insert_order(ctx, order):
     else:
         print('(+) order already inserted  {} properly (order)'.format(vtex_order_id))
 
+    # usefull to clean the current buffer to orders
+    cursor.execute(
+        "DELETE FROM [V-TEX.VETRO].dbo.importex_comenzi_clienti WHERE id_importex  like 'vtex-%' ")
+    ctx.commit()
+
 
 def get_tva(ctx):
+
     query = "SELECT id_intern, cota_tva_ies FROM accesex_produse_view WHERE tip = 'N';"
     cursor = ctx.cursor()
     cursor.execute(query)
@@ -278,6 +292,7 @@ def get_tva(ctx):
 
 
 def get_document_id(ctx):
+
     sequence_document_query = "SELECT IDENT_CURRENT('importex_comenzi_clienti') + 1 "
     cursor = ctx.cursor()
     cursor.execute(sequence_document_query)
