@@ -39,8 +39,9 @@ cursor = connection.cursor()
 # SQL PART FROM NEXUS
 
 # getting all new vtex- order from nexuss
-query_vtex_nexus = "select id_importex,stare_comanda, id_document from accesex_comenzi_clienti where id_importex  like 'vtex-%' and data_document='{}' ".format(
-    str(date.today()))
+query_vtex_nexus = "select id_importex,stare_comanda, id_document from accesex_comenzi_clienti where id_importex  like 'vtex-%' "
+# and data_document='{}' ".format(
+#     str(date.today()))
 
 # query to get series and number
 query_invoice_nexus = """
@@ -87,12 +88,18 @@ for order in orders_status:
 
     print("(+) Requesting order {}".format(vtex_id))
 
-    if validate_status(status_invoice, status):
+    response = requests.request(
+        "GET", url_get_order.format(vtex_id), headers=headers)
+    order_details = response.json()
+
+    vtex_status = order_details['status']
+    vtex_date_invoice = order_details['invoicedDate']
+
+    if validate_status(status_invoice, status) and not vtex_status == 'invoiced' and not vtex_date_invoice:
         print("(+) Updating state on vtex order {} [invoice]".format(vtex_id))
-        response = requests.request(
-            "GET", url_get_order.format(vtex_id), headers=headers)
-        order_details = response.json()
+
         value = order_details['value']
+
         print(' - executing query this takes along time')
         cursor.execute(query_invoice_nexus.format(number_order))
         invoice = cursor.fetchone()
@@ -110,16 +117,16 @@ for order in orders_status:
                 serie, str(number_order))
             payload = json.dumps(payload)
             print(' - sending invoice notification')
-            response = requests.request('POST', url_post_invoice_notification.format(
-                vtex_id), data=payload, headers=headers)
+        response = requests.request('POST', url_post_invoice_notification.format(
+            vtex_id), data=payload, headers=headers)
 
-    if validate_status(status_cancelled_order, status):
+    if validate_status(status_cancelled_order, status) and not vtex_status == 'cancelled':
         print(
             "(+) Updating state on vtex order {} [cancelled]".format(vtex_id))
         response = requests.request(
             'POST', url_post_cancel_order.format(vtex_id), headers=headers)
 
-    if validate_status(status_ready_for_handling, status):
+    if validate_status(status_ready_for_handling, status) and not vtex_status == 'ready-for-handling':
         print(
             "(+) Updating state on vtex order {} [ready-for-handling]".format(vtex_id))
         response = requests.request(

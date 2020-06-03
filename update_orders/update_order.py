@@ -196,7 +196,7 @@ headers = {
 
 # url used for api
 # f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&
-url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[2020-06-02T06:00:00.000Z TO 2020-06-02T09:59:59.999Z]&orderBy=creationDate,asc&page="
+url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[2020-06-02T06:00:00.000Z TO 2020-06-03T09:59:59.999Z]&orderBy=creationDate,asc&page="
 url_get_stock = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders/"
 
 # iteration ids for orders
