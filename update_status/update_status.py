@@ -39,9 +39,9 @@ cursor = connection.cursor()
 # SQL PART FROM NEXUS
 
 # getting all new vtex- order from nexuss
-query_vtex_nexus = "select id_importex,stare_comanda, id_document from accesex_comenzi_clienti where id_importex  like 'vtex-%' "
-# and data_document='{}' ".format(
-#     str(date.today()))
+query_vtex_nexus = "select id_importex,stare_comanda, id_document from accesex_comenzi_clienti where id_importex  like 'vtex-%' and data_document='{}' ".format(
+    str(date.today()))
+
 
 # query to get series and number
 query_invoice_nexus = """
@@ -118,6 +118,8 @@ for order in orders_status:
             payload = json.dumps(payload)
             print(' - sending invoice notification')
         response = requests.request('POST', url_post_invoice_notification.format(
+            vtex_id), data=payload, headers=headers)
+        response = requests.request('POST', url_post_ready.format(
             vtex_id), data=payload, headers=headers)
 
     if validate_status(status_cancelled_order, status) and not vtex_status == 'cancelled':

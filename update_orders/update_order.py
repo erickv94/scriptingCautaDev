@@ -8,6 +8,14 @@ import requests
 import time
 import json
 import hashlib
+from datetime import datetime
+from datetime import timedelta
+
+now = datetime.now()
+five_mins_before = now - timedelta(minutes=5, seconds=15)
+
+now = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+five_mins_before = five_mins_before.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def get_data(url, id='master'):
@@ -196,7 +204,9 @@ headers = {
 
 # url used for api
 # f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&
-url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[2020-06-02T06:00:00.000Z TO 2020-06-03T09:59:59.999Z]&orderBy=creationDate,asc&page="
+url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[{} TO {}]&orderBy=creationDate,asc&page=".format(
+    five_mins_before, now)
+
 url_get_stock = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders/"
 
 # iteration ids for orders
@@ -251,3 +261,18 @@ for address in address_per_client:
     insert_address(connection, address)
 for order in order_list:
     insert_order(connection, order)
+
+# usefull to clean the current buffer to orders
+cursor.execute(
+    "DELETE FROM [V-TEX.VETRO].dbo.importex_comenzi_clienti WHERE id_importex  like 'vtex-%' ")
+connection.commit()
+
+# usefull to clean the current buffer to address
+cursor.execute(
+    "DELETE FROM [V-TEX.VETRO].dbo.importex_adrese WHERE id_importex  like 'vtex-%' ")
+connection.commit()
+
+# usefull to clean buffer clients
+cursor.execute(
+    "DELETE FROM [V-TEX.VETRO].dbo.importex_parteneri WHERE id_importex  like 'vtex-%' ")
+connection.commit()

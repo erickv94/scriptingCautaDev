@@ -1,7 +1,8 @@
 
 import random
 import string
-from settings import carnet_id
+import smtplib
+from settings import carnet_id, smtp_server, smtp_user, smtp_password, smtp_port, first_destinatary
 
 
 def randomword(length):
@@ -110,10 +111,17 @@ def insert_client(ctx, client):
     else:
         confirm_procedure = "EXEC importex_parteneri_exec @id_importex = N'{}' , @keep_data_on_err = N'0'".format(
             vtex_id)
-
-    cursor.execute(confirm_procedure)
-    ctx.commit()
-    print('(+) data inserted/updated  {} properly (client)'.format(vtex_id))
+    try:
+        cursor.execute(confirm_procedure)
+        ctx.commit()
+        print('(+) data inserted/updated  {} properly (client)'.format(vtex_id))
+    except Exception as e:
+        message = "Subject: {} \n\n An error has ocurred on client with name: {}, vtex_id: {} error: {} \n\n Query Used: {} with data {}".format(
+            "Error on vtex-nexus integration [client]", client['full_name'], vtex_id, e, sql_insert, insert_data)
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        server.login(smtp_user, smtp_password)
+        server.sendmail('cauta-vet-noreply@cauta.vet',
+                        first_destinatary, message)
 
 
 def insert_address(ctx, address):
@@ -170,10 +178,18 @@ def insert_address(ctx, address):
         else:
             confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @keep_data_on_err = N'0' ".format(
                 vtex_address_id)
-
-        cursor.execute(confirm_procedure)
-        ctx.commit()
-        print('(+) data inserted/updated  {} properly (address)'.format(vtex_address_id))
+        try:
+            cursor.execute(confirm_procedure)
+            ctx.commit()
+            print(
+                '(+) data inserted/updated  {} properly (address)'.format(vtex_address_id))
+        except Exception as e:
+            message = "Subject: {} \n\n An error has ocurred on address with state: {} city: {} error: {} \n\n Query used: {} with data {}".format(
+                "Error on vtex-nexus integration [address]", address['state'], address['city'], e, sql_insert, insert_data)
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+            server.login(smtp_user, smtp_password)
+            server.sendmail('cauta-vet-noreply@cauta.vet',
+                            first_destinatary, message)
 
 
 def insert_order(ctx, order):
@@ -260,6 +276,8 @@ def insert_order(ctx, order):
                                )
             cursor.execute(sql_insert_order_line, order_line_data)
             ctx.commit()
+
+        # transport item for invoices
         order_line_data = (id_document, "3612(1)",
                            'FAA', 1,
                            '', order['shipping_price'],
@@ -268,18 +286,23 @@ def insert_order(ctx, order):
         cursor.execute(sql_insert_order_line, order_line_data)
         ctx.commit()
 
+        # using procedure
         confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' , @keep_data_on_err = N'0' ".format(
             vtex_order_id)
-        cursor.execute(confirm_procedure)
-        ctx.commit()
-        print('(+) data inserted  {} properly (order)'.format(vtex_order_id))
+        try:
+            cursor.execute(confirm_procedure)
+            ctx.commit()
+            print('(+) data inserted  {} properly (order)'.format(vtex_order_id))
+        except Exception as e:
+            # using exception for client message
+            message = "Subject: {} \n\n An error has ocurred on address with  order_id: {} user_id: {} error: {} \n\n Query Used: {} with values {}".format(
+                "Error on vtex-nexus integration [order]", vtex_order_id, vtex_user_id, e, sql_insert_order, order_data)
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+            server.login(smtp_user, smtp_password)
+            server.sendmail('cauta-vet-noreply@cauta.vet',
+                            first_destinatary, message)
     else:
         print('(+) order already inserted  {} properly (order)'.format(vtex_order_id))
-
-    # usefull to clean the current buffer to orders
-    cursor.execute(
-        "DELETE FROM [V-TEX.VETRO].dbo.importex_comenzi_clienti WHERE id_importex  like 'vtex-%' ")
-    ctx.commit()
 
 
 def get_tva(ctx):
