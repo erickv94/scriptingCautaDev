@@ -12,10 +12,10 @@ from datetime import datetime
 from datetime import timedelta
 
 now = datetime.now()
-five_mins_before = now - timedelta(minutes=5, seconds=15)
+forty_mins_before = now - timedelta(minutes=40, seconds=15)
 
 now = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-five_mins_before = five_mins_before.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+forty_mins_before = forty_mins_before.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def get_data(url, id='master'):
@@ -205,8 +205,7 @@ headers = {
 # url used for api
 # f_authorizedDate=authorizedDate:[2020-05-15T02:00:00.000Z TO 2020-05-20T01:59:59.999Z]&
 url_stocks_from_date = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders?f_authorizedDate=authorizedDate:[{} TO {}]&orderBy=creationDate,asc&page=".format(
-    five_mins_before, now)
-
+    forty_mins_before, now)
 url_get_stock = "https://vetro.vtexcommercestable.com.br/api/oms/pvt/orders/"
 
 # iteration ids for orders
