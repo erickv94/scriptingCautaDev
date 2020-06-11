@@ -12,7 +12,7 @@ def randomword(length):
 
 
 def insert_client(ctx, client):
-    sql_insert = """INSERT INTO [V-TEX.VETRO].dbo.importex_parteneri
+    sql_insert = """INSERT INTO importex_parteneri
     (id_importex, id_intern,
     id_partener, cif_cnp,
     denumire, pers_fizica,
@@ -125,7 +125,7 @@ def insert_client(ctx, client):
 
 
 def insert_address(ctx, address):
-    sql_insert = """INSERT INTO [V-TEX.VETRO].[dbo].importex_adrese
+    sql_insert = """INSERT INTO importex_adrese
 	(id_importex, id_extern,
     denumire, id_extern_partener,
     cod_tara, den_localitate,
@@ -168,7 +168,7 @@ def insert_address(ctx, address):
         cursor = ctx.cursor()
         cursor.execute(sql_insert, insert_data)
         ctx.commit()
-        queryExist = "SELECT * FROM [V-TEX.VETRO].dbo.accesex_adrese_parteneri_view WHERE id_importex= '{}'".format(
+        queryExist = "SELECT * FROM accesex_adrese_parteneri_view WHERE id_importex= '{}'".format(
             vtex_address_id)
         cursor.execute(queryExist)
         exist = cursor.fetchone()
@@ -194,7 +194,7 @@ def insert_address(ctx, address):
 
 def insert_order(ctx, order):
     sql_insert_order = """
-    INSERT INTO [V-TEX.VETRO].dbo.importex_comenzi_clienti
+    INSERT INTO importex_comenzi_clienti
     (id_importex, numar_document,
      tip_document,id_carnet,
     serie_document, data_document,
@@ -221,7 +221,7 @@ def insert_order(ctx, order):
            ?)
     """
     sql_insert_order_line = """
-    INSERT INTO [V-TEX.VETRO].dbo.importex_comenzi_clienti_lin
+    INSERT INTO importex_comenzi_clienti_lin
     (id_document, id_produs,
     tip_produs,  cantitate,
     pret_vanzare, pret_vanzare_tva,
