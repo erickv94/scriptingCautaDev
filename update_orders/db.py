@@ -13,7 +13,6 @@ def connect_to_db():
         "UID="+db_user+";"
         "PWD="+db_password+";"
     )
-    connection.setencoding('utf-16-le')
 
     return connection
 
