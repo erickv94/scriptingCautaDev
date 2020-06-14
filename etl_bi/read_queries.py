@@ -34,10 +34,37 @@ val_puv AS valoare_totala_a_vanzarii_fara_tva,
 den_sup AS denumire_suplimentare
 
 
-FROM dbo.raport_bi_statistica_vanzari('2020-04-01', '2020-04-05', 1, 1, 1, 1, 0, 1, 0, 0, 0)
+FROM dbo.raport_bi_statistica_vanzari('2018-01-01', '2020-04-13', 1, 1, 1, 1, 0, 1, 0, 0, 0)
 WHERE
 cont_cu_denumire NOT LIKE '758%' AND
 cont_cu_denumire NOT LIKE '419%' AND
 cont_cu_denumire NOT LIKE '557%' AND
 cont_cu_denumire NOT LIKE '667%';
 '''
+
+# queries to validate existed data
+agent = "select * from public.agents where agent_id = '{}'"
+client = "select * from public.clients where client_id = '{}'"
+
+brand = "select * from public.brands where brand_id = '{}'"
+
+county = "select * from public.counties where county_id = '{}'"
+
+locality = "select * from public.localities where locality_id='{}'"
+
+zone = "select * from public.zones where zone_id='{}'"
+
+product = "select * from public.products where product_id='{}' "
+
+invoice = "select * from public.invoices where number='{}'"
+
+sql_select = {
+    'agent': agent,
+    'client': client,
+    'brand': brand,
+    'county': county,
+    'locality': locality,
+    'zone': zone,
+    'product': product,
+    'invoice': invoice
+}
