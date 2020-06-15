@@ -28,7 +28,7 @@ print('(+) Database connection ended')
 print('(+) Query to database started')
 cursor = connection.cursor()
 cursor.execute("""SELECT [id_produs], SUM([stoc]) - SUM([rezervat]) AS diff_stoc_reserved 
-FROM [S.C. VETRO SOLUTIONS S.R.L.].[dbo].[accesex_stoc_view] WHERE [id_gestiune] = '1(1)' AND [stoc] > 0 
+FROM [S.C. VETRO SOLUTIONS S.R.L.].[dbo].[accesex_stoc_view] WHERE [id_gestiune] = '1(1)' AND [stoc] >= 0 
 GROUP BY [id_produs];""")
 
 stock_available = {}
