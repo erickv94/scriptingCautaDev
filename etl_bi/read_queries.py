@@ -1,4 +1,12 @@
-sql_source = '''SELECT 
+from datetime import datetime
+from datetime import timedelta
+now = datetime.now()
+yesterday = now - timedelta(days=1)
+
+now_str = now.strftime('%m-%d-%Y')
+yesterday_str = yesterday.strftime('%m-%d-%Y')
+
+sql_source = """SELECT 
 tip_doc,
 seria_doc,
 nr_doc,
@@ -34,13 +42,13 @@ val_puv AS valoare_totala_a_vanzarii_fara_tva,
 den_sup AS denumire_suplimentare
 
 
-FROM dbo.raport_bi_statistica_vanzari('2018-01-01', '2020-06-15', 1, 1, 1, 1, 0, 1, 0, 0, 0)
+FROM dbo.raport_bi_statistica_vanzari('{}', '{}', 1, 1, 1, 1, 0, 1, 0, 0, 0)
 WHERE
 cont_cu_denumire NOT LIKE '758%' AND
 cont_cu_denumire NOT LIKE '419%' AND
 cont_cu_denumire NOT LIKE '557%' AND
 cont_cu_denumire NOT LIKE '667%';
-'''
+""".format(yesterday_str, now_str)
 
 # queries to validate existed data
 agent = "select * from public.agents where agent_id = '{}'"

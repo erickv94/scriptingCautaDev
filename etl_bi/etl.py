@@ -2,7 +2,7 @@ from settings import db_host, db_name, db_password, db_port, db_user, db_driver,
 from parser_data import parser_row_parentheses, parser_row_empty
 import pyodbc
 import psycopg2
-from read_queries import sql_source
+from read_queries import sql_source, now_str, yesterday_str
 from insert_queries import insert_query_dict
 from service import create_source
 import time
@@ -30,7 +30,7 @@ print('(+) already connected to PostgresSQL')
 
 cursor_mssql = connection_mssql.cursor()
 
-print('(+) executing sql query for retrive all data from x to y')
+print('(+) executing sql query for retrive all data from {} to {}'.format(yesterday_str, now_str))
 cursor_mssql.execute(sql_source)
 data = cursor_mssql.fetchall()
 size_data = len(data)
