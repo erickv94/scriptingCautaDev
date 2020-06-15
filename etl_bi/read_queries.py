@@ -34,7 +34,7 @@ val_puv AS valoare_totala_a_vanzarii_fara_tva,
 den_sup AS denumire_suplimentare
 
 
-FROM dbo.raport_bi_statistica_vanzari('2018-01-01', '2020-04-13', 1, 1, 1, 1, 0, 1, 0, 0, 0)
+FROM dbo.raport_bi_statistica_vanzari('2018-01-01', '2020-06-15', 1, 1, 1, 1, 0, 1, 0, 0, 0)
 WHERE
 cont_cu_denumire NOT LIKE '758%' AND
 cont_cu_denumire NOT LIKE '419%' AND
