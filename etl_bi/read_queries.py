@@ -47,7 +47,8 @@ WHERE
 cont_cu_denumire NOT LIKE '758%' AND
 cont_cu_denumire NOT LIKE '419%' AND
 cont_cu_denumire NOT LIKE '557%' AND
-cont_cu_denumire NOT LIKE '667%';
+cont_cu_denumire NOT LIKE '667%' AND
+seria_doc not in ('VETAV','FFVG');
 """.format(yesterday_str, now_str)
 
 # queries to validate existed data
