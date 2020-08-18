@@ -8,3 +8,4 @@ xlsxwriter
 openpyxl
 colorama
 psycopg2
+ImageHash
