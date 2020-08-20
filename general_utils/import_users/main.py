@@ -31,20 +31,19 @@ cursor = connection.cursor()
 print('(+) Database connection ended')
 
 query_nexus = '''select apv.id_intern as company_id, pv.email as company_email, pv.nume as company_name,
-	   pv.contul as iban, pv.localitate as oras, pv.adresa as strada, pv.reg_comert as company_reg, 
+	   pv.contul as iban, pv.localitate as oras, pv.adresa as strada, pv.reg_comert as company_reg,
 	   pv.banca as bank, CONCAT(pv.atr_fiscal,' ',pv.cod_fiscal) as cif ,
-	   pv.judet as judet , apv.den_agent as agent_name, p.email as agent_email, p.telefon as agent_tel 
-	   from parteneri_view  as pv 
-	   left join 
-	   accesex_parteneri_view apv 
-	   on 
+	   pv.judet as judet , apv.den_agent as agent_name, p.email as agent_email, p.telefon as agent_tel
+	   from parteneri_view  as pv
+	   left join
+	   accesex_parteneri_view apv
+	   on
 	   apv.id_intern = CONCAT(pv.id, '(',pv.pct_lcr,')')
-	   left join 
+	   left join
 	   personal as p
-	   on concat(p.id,'(',p.pct_lcr, ')') = apv.id_agent 
+	   on concat(p.id,'(',p.pct_lcr, ')') = apv.id_agent
 	   where CONCAT(pv.id, '(',pv.pct_lcr,')')= '{}'
        '''
-query_personal = 'select * from personal;'
 # entitie
 company = 'MC'
 client = 'CL'
@@ -56,6 +55,7 @@ default_sheet = 'Teamshare Export'
 df_skus = pd.read_excel(skus_xls, sheet_name=default_sheet)
 
 # iterate over the dataset
+print('(+) iterate over xlsx')
 for index, row in df_skus.iterrows():
     if pd.notnull(row['Alternate Username']):
         refId = row["Alternate Username"]
@@ -64,9 +64,42 @@ for index, row in df_skus.iterrows():
         cursor.execute(query_nexus.format(refId))
         customer = cursor.fetchone()
 
-        # payload={
-        #     'email': emailFromExcel if not  pd.notnull(emailFromExcel) else
-        # }
-        # print(query_nexus.format(refId))
-        # customer = cursor.execute(' ')
-        # response = requests.put(url, headers=headers, data=payload)
+        if customer:
+            payloadCL = {
+                'email': emailFromExcel if not pd.notnull(emailFromExcel) else customer.company_email,
+                'companyErpId': customer.company_id,
+                'companyName': customer.company_name,
+                'companyCIF': customer.cif,
+                'firstName': customer.company_name,
+                'salesAgentName': customer.agent_name,
+                'salesAgentPhone': customer.agent_tel,
+                'salesAgentEmail': customer.agent_email
+            }
+
+            payloadMC = {
+                'email': emailFromExcel if not pd.notnull(emailFromExcel) else customer.company_email,
+                'companyErpId': customer.company_id,
+                'companyName': customer.company_name,
+                'companyNrRegCom': customer.company_reg,
+                'companyCIF': customer.cif,
+                'salesAgentName': customer.agent_name,
+                'salesAgentPhone': customer.agent_tel,
+                'salesAgentEmail': customer.agent_email,
+                'bank': customer.bank,
+                'iban': customer.iban,
+                'judet': customer.judet,
+                'oras': customer.oras,
+                'strada': customer.strada
+            }
+            payloadCL = json.dumps(payloadCL)
+            payloadMC = json.dumps(payloadMC)
+
+            responseCL = requests.put(url.format(
+                client), headers=headers, data=payloadCL)
+            responseMC = requests.put(url.format(
+                company), headers=headers, data=payloadMC)
+
+            print(
+                '(+) Row Nr.Crt. id {} processed on masterdata'.format(row['Nr.Crt.']))
+            print('\t- http codes CL: {} MC: {}'.format(
+                responseCL.status_code, responseMC.status_code))
