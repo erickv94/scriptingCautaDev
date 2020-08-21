@@ -53,20 +53,26 @@ current_path = Path(__file__).parent.absolute()
 skus_xls = current_path/'data.xlsx'
 default_sheet = 'Teamshare Export'
 df_skus = pd.read_excel(skus_xls, sheet_name=default_sheet)
-
+option = input('What operation need to do: s/r (s=store,r=revoke): ')
 # iterate over the dataset
 print('(+) iterate over xlsx')
 for index, row in df_skus.iterrows():
-    if pd.notnull(row['Alternate Username']):
-        refId = row["Alternate Username"]
-        emailFromExcel = row['Username']
 
+    # get email from db or xlsx
+
+    if pd.notnull(row['Alternate Username']):
+
+        refId = row["Alternate Username"]
         cursor.execute(query_nexus.format(refId))
         customer = cursor.fetchone()
+        # get email from db or xlsx
+        emailFromExcel = row['Username']
+        email = emailFromExcel if not pd.notnull(
+            emailFromExcel) else customer.company_email
 
-        if customer:
+        if customer and option.lower() == 's':
             payloadCL = {
-                'email': emailFromExcel if not pd.notnull(emailFromExcel) else customer.company_email,
+                'email': email,
                 'companyErpId': customer.company_id,
                 'companyName': customer.company_name,
                 'companyCIF': customer.cif,
@@ -103,3 +109,18 @@ for index, row in df_skus.iterrows():
                 '(+) Row Nr.Crt. id {} processed on masterdata'.format(row['Nr.Crt.']))
             print('\t- http codes CL: {} MC: {}'.format(
                 responseCL.status_code, responseMC.status_code))
+
+        elif customer and option.lower() == 'r':
+
+            search_resource_by_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?_fields=id&email={}'
+            delete_resource_by_id = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities{}/documents/{}'
+
+            # iterate over two entitys, both have an entry point as  an email
+            for entity in [client, company]:
+                res = requests.get(search_resource_by_email.format(entity, email), headers=headers)
+                entityIds = res.json()
+                # remove ids from response
+                for entityId in entityIds:
+                    id = entityId['id']
+                    res = requests.delete(delete_resource_by_id.format(entity, id))
+                    print('\t{} document with {} has been removed'.format(entity, id))
