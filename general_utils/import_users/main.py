@@ -113,14 +113,18 @@ for index, row in df_skus.iterrows():
         elif customer and option.lower() == 'r':
 
             search_resource_by_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?_fields=id&email={}'
-            delete_resource_by_id = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities{}/documents/{}'
+            delete_resource_by_id = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/documents/{}'
 
             # iterate over two entitys, both have an entry point as  an email
             for entity in [client, company]:
                 res = requests.get(search_resource_by_email.format(entity, email), headers=headers)
                 entityIds = res.json()
                 # remove ids from response
-                for entityId in entityIds:
-                    id = entityId['id']
-                    res = requests.delete(delete_resource_by_id.format(entity, id))
-                    print('\t{} document with {} has been removed'.format(entity, id))
+
+                if not len(entityIds) == 0:
+                    for entityId in entityIds:
+                        id = entityId['id']
+                        res = requests.delete(delete_resource_by_id.format(entity, id), headers=headers)
+                        print('\t{} document with {} has been removed'.format(entity, id))
+                else:
+                    print('\t{} document with {} already removed'.format(entity, email))
