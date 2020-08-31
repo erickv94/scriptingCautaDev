@@ -168,7 +168,21 @@ while flag:
 
 for address in address_list:
     insert_address(connection, address)
-for order in order_list:
-    insert_order(connection, order)
+# for order in order_list:
+#     insert_order(connection, order)
     # insert_order(connection, order)
-print(order_list)
+
+# usefull to clean the current buffer to address
+cursor.execute(
+    "DELETE FROM importex_adrese WHERE id_importex  like 'vtex-%' ")
+connection.commit()
+
+# usefull to clean buffer clients
+cursor.execute(
+    "DELETE FROM importex_parteneri WHERE id_importex  like 'vtex-%' ")
+connection.commit()
+
+# usefull to clean buffer clients
+cursor.execute(
+    "DELETE FROM importex_parteneri WHERE id_importex  like 'vtex-%' ")
+connection.commit()

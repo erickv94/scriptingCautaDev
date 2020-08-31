@@ -35,12 +35,12 @@ def insert_address(ctx, address):
     on 
     apv.id_intern = CONCAT(pv.id, '(',pv.pct_lcr,')') where  CONCAT(pv.atr_fiscal,' ',pv.cod_fiscal)='{}'
     """
-
+    print(sql_insert)
     cursor.execute(sql_fetch_id_company.format(address['cif']))
     company = cursor.fetchone()
     if not company:
         return
-    vtex_address_id = 'vtex-'+address['address_id']
+    vtex_address_id = 'vtex-'+address['address_id']+'-js'
     complement = address['complement'] if address['complement'] else None
     phone = address['phone'] if address['phone'] else ''
     denumire = address['street']+' '+address['number']+' '+randomword(3)
@@ -57,26 +57,27 @@ def insert_address(ctx, address):
                    address['state'], address['street'],
                    address['number'], phone,
                    observati)
-
+    print(insert_data)
     cursor.execute(sql_insert, insert_data)
     ctx.commit()
     queryExist = "SELECT * FROM accesex_adrese_parteneri_view WHERE id_importex= '{}'".format(
         vtex_address_id)
     cursor.execute(queryExist)
     exist = cursor.fetchone()
-    if exist:
-        confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @manage_existing = N'1' , @keep_data_on_err = N'0' ".format(
-            vtex_address_id)
-    else:
-        confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @keep_data_on_err = N'0' ".format(
-            vtex_address_id)
+    # if exist:
+    confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @manage_existing = N'1' , @keep_data_on_err = N'0', @updated_columns = N'{}'; ".format(
+        vtex_address_id, 'id_importex,id_extern,denumire,id_partener,cod_tara,den_localitate,den_regiune,strada,numar,telefon,observatii')
+    print(confirm_procedure)
+    # else:
+    #     confirm_procedure = "EXEC importex_adrese_exec @id_importex = N'{}', @keep_data_on_err = N'0' ".format(
+    #         vtex_address_id)
     try:
         cursor.execute(confirm_procedure)
         ctx.commit()
         print(
             '(+) data inserted/updated  {} properly (address)'.format(vtex_address_id))
     except Exception as e:
-        pass
+        print(e)
         # message = "Subject: {} \n\n An error has ocurred on address with state: {} city: {} error: {} \n\n Query used: {} with data {}".format(
         #     "Error on vtex-nexus integration [address]", address['state'], address['city'], e, sql_insert, insert_data)
         # server = smtplib.SMTP_SSL(smtp_server, smtp_port)
@@ -138,7 +139,7 @@ def insert_order(ctx, order):
     """
 
     id_document = get_document_id(ctx)
-    vtex_order_id = 'vtex-'+order['order_id']
+    vtex_order_id = 'vtex-'+order['order_id']+'nx'
     cif = order['profile_id']
     vtex_address_id = order['address_id']
 
@@ -167,7 +168,7 @@ def insert_order(ctx, order):
 
     sql_exist_order = "select * from accesex_comenzi_clienti  where id_importex = '{}'".format(
         vtex_order_id)
-    print()
+
     cursor.execute(sql_exist_order)
     exist = cursor.fetchone()
 
