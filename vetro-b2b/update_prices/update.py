@@ -7,7 +7,6 @@ import json
 # urls from vtex api
 headers = {
     'content-type': "application/json",
-    'accept': "application/vnd.vtex.ds.v10+json",
     'x-vtex-api-appkey': api_key,
     'x-vtex-api-apptoken': api_token
 }
@@ -35,7 +34,7 @@ print('(+) Query to database started')
 cursor = connection.cursor()
 
 cursor.execute("""
-SELECT top 3 
+SELECT 
 CONCAT(id_pr,'(',pl_pr,')') AS prod_id,
 puv AS sale_price_no_vat,
 denpr AS product_name
@@ -65,13 +64,16 @@ for row in rows:
     sku_name = row[2]
     payload = {
         "basePrice": price,
-        "listPrice": price,
         "markup": 0
     }
-    payload = json.dumps(payload)
-    response = requests.request(
-        "PUT", url_update_price.format(row[0]), data=payload, headers=headers)
+    # payload = json.dumps(payload)
+    url = url_update_price.format(sku_id)
+    print(url)
+    response = requests.request("PUT", url, json=payload, headers=headers)
+
     print(response.status_code, sku_id, row[2])
+    print(payload)
+    print(response.text)
 
 print('(+) Query to database ended')
 
