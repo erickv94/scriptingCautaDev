@@ -168,8 +168,8 @@ while flag:
 
 for address in address_list:
     insert_address(connection, address)
-# for order in order_list:
-#     insert_order(connection, order)
+for order in order_list:
+    insert_order(connection, order)
     # insert_order(connection, order)
 
 # usefull to clean the current buffer to address

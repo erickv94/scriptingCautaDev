@@ -114,6 +114,7 @@ def insert_order(ctx, order):
            ?, ?,
            ?)
     """
+    print(sql_insert_order)
     sql_insert_order_line = """
     INSERT INTO importex_comenzi_clienti_lin
     (id_document, id_produs,
@@ -163,6 +164,8 @@ def insert_order(ctx, order):
                   0, order['total'],
                   0
                   )
+    print(order_data)
+    print(sql_insert_order_line)
     cursor.execute(sql_insert_order, order_data)
     ctx.commit()
 
@@ -182,6 +185,7 @@ def insert_order(ctx, order):
                                )
             cursor.execute(sql_insert_order_line, order_line_data)
             ctx.commit()
+            print(order_line_data)
 
         # transport item for invoices
         order_line_data = (id_document, "3612(1)",
@@ -189,11 +193,13 @@ def insert_order(ctx, order):
                            '', order['shipping_price'],
                            0, '0',
                            "Shipping")
+        print(order_line_data)
         cursor.execute(sql_insert_order_line, order_line_data)
         ctx.commit()
         # using procedure
         confirm_procedure = "EXEC importex_comenzi_clienti_exec @id_importex = N'{}' , @keep_data_on_err = N'0' ".format(
             vtex_order_id)
+        print(confirm_procedure)
         try:
             cursor.execute(confirm_procedure)
             ctx.commit()
