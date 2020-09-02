@@ -63,6 +63,7 @@ for index, row in df_skus.iterrows():
     if pd.notnull(row['Alternate Username']):
 
         refId = row["Alternate Username"]
+        print(refId)
         cursor.execute(query_nexus.format(refId))
         customer = cursor.fetchone()
         # get email from db or xlsx
@@ -71,6 +72,10 @@ for index, row in df_skus.iterrows():
             emailFromExcel) else customer.company_email
 
         if customer and option.lower() == 's':
+            search_resource_by_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?email={}'
+            search_res_by_cif = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?companyCIF={}'
+            search_resource_by_client_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?clientEmail={}'
+
             payloadCL = {
                 'email': email,
                 'companyErpId': customer.company_id,
@@ -83,7 +88,7 @@ for index, row in df_skus.iterrows():
             }
 
             payloadMC = {
-                'email': emailFromExcel if not pd.notnull(emailFromExcel) else customer.company_email,
+                'email': email,
                 'companyErpId': customer.company_id,
                 'companyName': customer.company_name,
                 'companyNrRegCom': customer.company_reg,
@@ -97,27 +102,62 @@ for index, row in df_skus.iterrows():
                 'oras': customer.oras,
                 'strada': customer.strada
             }
+
+            payloadPivot = {
+                'clientEmail': email,
+                'companyCIF': customer.cif
+            }
+
             payloadCL = json.dumps(payloadCL)
             payloadMC = json.dumps(payloadMC)
+            payloadPivot = json.dumps(payloadPivot)
 
-            responseCL = requests.put(url.format(
-                client), headers=headers, data=payloadCL)
-            responseMC = requests.put(url.format(
-                company), headers=headers, data=payloadMC)
+            codeMC = codeCL = codeRC = 409
 
-            print(
-                '(+) Row Nr.Crt. id {} processed on masterdata'.format(row['Nr.Crt.']))
-            print('\t- http codes CL: {} MC: {}'.format(
-                responseCL.status_code, responseMC.status_code))
+            # check if it exists on master data CL
+            has_doc_client = requests.get(search_resource_by_email.format(client, email), headers=headers)
+            has_doc_client = has_doc_client.json()
+
+            if not has_doc_client:
+                responseCL = requests.put(url.format(client), headers=headers, data=payloadCL)
+                codeCL = responseCL.status_code
+
+            # check if it exists on master data MC
+            has_doc_mc = requests.get(search_resource_by_email.format(company, email), headers=headers)
+            has_doc_mc = has_doc_mc.json()
+
+            if not has_doc_mc:
+                responseMC = requests.put(url.format(company), headers=headers, data=payloadMC)
+                codeMC = responseMC.status_code
+
+            hasCif = requests.get(search_res_by_cif.format('RC', customer.cif), headers=headers)
+            hasCif = hasCif.json()
+            hasEmail = requests.get(search_resource_by_client_email.format('RC', email), headers=headers)
+            hasEmail = hasEmail.json()
+
+            hasPivot = hasCif and hasEmail
+
+            if not hasPivot:
+                responsePivot = requests.put(url.format('RC'), headers=headers, data=payloadPivot)
+                codeRC = responsePivot.status_code
+
+            print('(+) Row Nr.Crt. id {} processed on masterdata'.format(row['Nr.Crt.']))
+            print('\t- http codes CL: {} MC: {} Pivot: {}'.format(codeCL, codeMC, codeRC))
 
         elif customer and option.lower() == 'r':
 
-            search_resource_by_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?_fields=id&email={}'
+            search_resource_by_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?email={}'
+            search_resource_by_client_email = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/search?clientEmail={}'
             delete_resource_by_id = 'https://vetrob2c.vtexcommercestable.com.br/api/dataentities/{}/documents/{}'
 
             # iterate over two entitys, both have an entry point as  an email
-            for entity in [client, company]:
-                res = requests.get(search_resource_by_email.format(entity, email), headers=headers)
+            for entity in [client, company, 'RC']:
+                res = []
+                if entity == 'RC':
+                    res = requests.get(search_resource_by_client_email.format(entity, email), headers=headers)
+                else:
+                    res = requests.get(search_resource_by_email.format(entity, email), headers=headers)
+
                 entityIds = res.json()
                 # remove ids from response
 

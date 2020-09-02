@@ -1,9 +1,15 @@
-from settings import db_host, db_password, db_port, db_user, db_driver, api_key, api_token
+from settings import db_host, db_password, db_port, db_user, db_driver, api_key, api_token, enviroment
 import pyodbc
 import requests
 import time
 import json
-# urls from vtex api
+import sys
+import os
+
+if enviroment == 'production':
+    sys.stdout = open(os.devnull, 'w')
+
+    # urls from vtex api
 headers = {
     'content-type': "application/json",
     'accept': "application/vnd.vtex.ds.v10+json",
@@ -46,7 +52,7 @@ print('(+) Verifying skus on nexus which exists on Vtex')
 payload = "{}".format(refIds)
 response = requests.request(
     "POST", url_sku_by_refid, data=payload, headers=headers)
-print(refIds)
+# print(refIds)
 skus_available = response.json()
 
 skus_filtered = {}
@@ -74,5 +80,10 @@ for key, value in skus_filtered.items():
 
 
 print('(+) Invetories updated sucessfully')
+
+# this will activate the I/O
+if enviroment == 'production':
+    sys.stdout = sys.__stdout__
+
 end_time = time.time()
 print('Task ended at {} seconds'.format(end_time-start_time))
