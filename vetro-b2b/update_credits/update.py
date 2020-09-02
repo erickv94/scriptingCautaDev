@@ -34,26 +34,26 @@ print('(+) Query to database started')
 cursor = connection.cursor()
 
 cursor.execute("""
-SELECT TOP 3 id_intern as id, denumire as name, email, 
-registru_comert as register,cif_cnp as cif, 
-termen_incasare as collection_term,  termen_plata as payment_term , 
-limita_credit as credit, restanta_max as  rest
-FROM accesex_parteneri_view WHERE id_agent != '0(0)';
+SELECT  
+apv.id_intern as id, apv.denumire as name, apv.email, 
+apv.registru_comert as register,apv.cif_cnp as cif, CONCAT(pv.atr_fiscal,' ',pv.cod_fiscal) as cif_concat, 
+apv.termen_incasare as collection_term,  apv.termen_plata as payment_term , 
+apv.limita_credit as credit, apv.restanta_max as  rest
+FROM accesex_parteneri_view  apv inner join parteneri_view pv
+ON
+ apv.id_intern = CONCAT(pv.id, '(',pv.pct_lcr,')')
+WHERE id_agent != '0(0)';
 """)
 
 
-rows = cursor.fetchall()
-"""
-for row in rows:
-    print(row.email)
-"""
-end_time = time.time()
+customers = cursor.fetchall()
+
 
 clients = []
 
-url_vtex_scroll = "https://vetrob2c.vtexcommercestable.com.br/api/dataentities/CL/scroll?_size=1000{}"
+url_vtex_scroll = "https://vetrob2c.vtexcommercestable.com.br/api/dataentities/CL/scroll{}"
 
-response = requests.get(url_vtex_scroll, headers=headers)
+response = requests.get(url_vtex_scroll.format('?_size=1000&_fields=email,companyCIF,userId,id'), headers=headers)
 clients = response.json()
 
 if response.status_code == 400:
@@ -64,13 +64,58 @@ token_md = response.headers["X-VTEX-MD-TOKEN"]
 ban = True
 while ban:
     response = requests.get(url_vtex_scroll.format(
-        "&_token={}".format(token_md)), headers=headers)
+        "?_token={}".format(token_md)), headers=headers)
     if response.status_code == 400:
         ban = False
         continue
     clients = clients + response.json()
 
-print(clients)
-print(len(clients))
+print('clients qty: {}'.format(len(clients)))
+url_account_base = "https://vetrob2c.vtexcommercestable.com.br/api/creditcontrol/accounts{}"
+url_update_credit_limit = 'https://vetrob2c.vtexcommercestable.com.br/api/creditcontrol/accounts/{}/creditlimit'
+url_update_credit_partiality = 'https://vetrob2c.vtexcommercestable.com.br/api/creditcontrol/accounts/{}'
+for client in clients:
+    # don't execute if it doesnt have a cif
+    if not client['companyCIF']:
+        print('+ customer does not have cif: {}'.format(client['email']))
+        continue
 
-print('Task ended at {} seconds'.format(end_time-start_time))
+    # getting respose for checking existing accounts
+    response = requests.get(url_account_base.format('?email={}'.format(client['email'])), headers=headers)
+    accountFounded = response.json()['data']
+
+    print('+ customer processed: {}'.format(client['email']))
+    # filter from database result
+    credit_limit_acc = None
+    for customer in customers:
+        if client['companyCIF'].replace(' ', '') == customer.cif_concat.replace(' ', ''):
+            # if client['email'] in customer.email:
+            credit_limit_acc = customer
+            break
+
+    if not credit_limit_acc:
+        continue
+
+    # if there's not an account open to the an email, it will be open
+    if len(accountFounded) == 0:
+        payloadCreate = {
+            "document": credit_limit_acc.cif,
+            "documentType": "CNPJ",
+            "email": client['email'],
+            "creditLimit": float(credit_limit_acc.credit),
+            "tolerance": "1"
+        }
+
+        responseCreated = requests.post(url_account_base.format(''), headers=headers, json=payloadCreate)
+        print('--- created account credit')
+    else:
+        accountCreditUpdate = accountFounded[0]['id']
+        payloadValue = {
+            "email": client['email'],
+            'creditLimit': float(credit_limit_acc.credit),
+            "document": credit_limit_acc.cif,
+            "id": accountCreditUpdate
+        }
+        responseUpdate = requests.put(url_update_credit_partiality.format(accountCreditUpdate),
+                                      headers=headers, json=payloadValue)
+        print('--- update credit limit')
